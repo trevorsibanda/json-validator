@@ -1,3 +1,12 @@
 # Routes
 # This file defines all application routes (Higher priority routes first)
 # ~~~~
+
+#Upload JSON Schema with unique `id`
+POST    /schema/:id	   controllers.SchemaController.create(id: String)
+
+#Download JSON Schema with unique `id`
+GET     /schema/:id        controllers.SchemaController.download(id: String)
+
+#Validate JSON document against the JSON Schema identified by `id`
+POST    /validate/:id      controllers.SchemaController.validate(id: String)
