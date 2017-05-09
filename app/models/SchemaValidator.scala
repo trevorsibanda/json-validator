@@ -10,36 +10,32 @@ import scala.util.{Either, Left, Right}
 
 case class Document(val node: JsonNode)
 object Document{
-	def apply(s: String): Document = {
-		new Document(JsonLoader.fromString(s))
-	}
+	def apply(s: String): Document = new Document(JsonLoader.fromString(s))
 }
 
 final case class Schema(val node: JsonNode){
-         val schema: JsonSchema = Schema.factory.getJsonSchema(node)
+         val jschema: JsonSchema = Schema.factory.getJsonSchema(node)
+
+	def validate(n: JsonNode) = jschema.validate(n)
 }
 object Schema{
 	val factory: JsonSchemaFactory = JsonSchemaFactory.byDefault()
 
-	def apply(schema: String): Schema = {
-		new Schema(JsonLoader.fromString(schema))
-	}
+	def apply(schema: String): Schema = new Schema(JsonLoader.fromString(schema))
 
-	def validate(schema: Schema): ProcessingReport = try factory.getSyntaxValidator().validateSchema(schema.node) catch{
+	def validate(schema: Schema): Boolean = try factory.getSyntaxValidator().validateSchema(schema.node).isSuccess catch{
 		case e: Exception => throw e //wrap this
 	}
 
-	def validate(schema: String): ProcessingReport = validate(apply(schema))
+	def validate(schema: String): Boolean = validate(apply(schema))
 }
 
 case class SchemaValidator(val schema: Schema){
-	def validate(doc: Document): Either[ProcessingReport, Document] = schema.schema.validate(doc.node) match{
+	def validate(doc: Document): Either[ProcessingReport, Document] = schema.validate(doc.node) match{
 		case report: ProcessingReport if report.isSuccess => Right(doc)
 		case report: ProcessingReport => Left(report)
 	}
 }
 object SchemaValidator{
-	def apply(s: String) = {
-		new SchemaValidator(Schema(s))
-	}
+	def apply(s: String) = new SchemaValidator(Schema(s))
 }
