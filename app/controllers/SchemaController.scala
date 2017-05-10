@@ -29,10 +29,10 @@ class SchemaController @Inject()(schemaDAO: SchemaDAO)(implicit executionContext
 	import scala.util.{Success, Failure}
 	import scala.concurrent.Future
 
-	def create(id: String) = Action.async{implicit request =>
+	def create(id: String) = Action.async(parse.tolerantText){implicit request =>
 		schemaDAO.exists(id) map{
 			case true => Status(403)(Json.toJson(SchemaIDExists(id)))
-			case _ => doCreate(id, request.body.asJson.get.toString)
+			case _ => doCreate(id, request.body)
 		}
 	}
 
@@ -45,10 +45,10 @@ class SchemaController @Inject()(schemaDAO: SchemaDAO)(implicit executionContext
 		}
 	}
 
-	def validate(id: String) = Action.async{request =>
+	def validate(id: String) = Action.async(parse.tolerantText){request =>
 		schemaDAO.exists(id) flatMap{
 			case false => Future(Status(404)(Json.toJson(SchemaNotFound(id))))
-			case true => doValidate(id, request.body.asJson.get.toString)
+			case true => doValidate(id, request.body)
 		}
 	}
 
