@@ -26,7 +26,7 @@ object SchemaDAO{
 	private val schemaTable = TableQuery[SchemaTable]
 
 	def get(id: String) ={
-		db.run(schemaTable.filter(_.id === id ).result.head)
+		db.run(schemaTable.filter(_.id === id ).result.headOption)
 	}
 
 	def schema_create = {

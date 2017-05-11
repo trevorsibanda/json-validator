@@ -30,25 +30,23 @@ class SchemaController @Inject()(schemaDAO: SchemaDAO)(implicit executionContext
 	import scala.concurrent.Future
 
 	def create(id: String) = Action.async(parse.tolerantText){implicit request =>
-		schemaDAO.exists(id) map{
-			case true => Status(403)(Json.toJson(SchemaIDExists(id)))
-			case _ => doCreate(id, request.body)
+		schemaDAO.get(id) map{
+			case Some(_) => Status(403)(Json.toJson(SchemaIDExists(id)))
+			case None => doCreate(id, request.body)
 		}
 	}
 
 	def download(id: String) = Action.async{request =>
-		schemaDAO.exists(id) flatMap{
-			case false => Future(Status(404)(Json.toJson(SchemaNotFound(id))))
-			case _ => schemaDAO.get(id).flatMap{
-				row => Future(Ok(Json.parse(row.json))) //set content type to application/json
-			}
+		schemaDAO.get(id) map{
+			case Some(row) => Ok(Json.parse(row.json))
+			case None => Status(404)(Json.toJson(SchemaNotFound(id)))
 		}
 	}
 
 	def validate(id: String) = Action.async(parse.tolerantText){request =>
-		schemaDAO.exists(id) flatMap{
-			case false => Future(Status(404)(Json.toJson(SchemaNotFound(id))))
-			case true => doValidate(id, request.body)
+		schemaDAO.get(id) map{
+			case Some(row) => doValidate(row, request.body)
+			case None => Status(404)(Json.toJson(SchemaNotFound(id)))
 		}
 	}
 
@@ -70,19 +68,17 @@ class SchemaController @Inject()(schemaDAO: SchemaDAO)(implicit executionContext
 		}
 	}
 
-	private def doValidate(id: String, json: String) = {
+	private def doValidate(row: SchemaRow, json: String) = {
 		import scala.util.{Either, Right, Left}
-		schemaDAO.get(id) map{row =>
-			try{
-				val validator = SchemaValidator(row.json)
-				val doc = Document(json)
-				validator.validate(doc) match{
-					case Right(doc) => Ok(Json.toJson(ValidDocument(id)))
-					case Left(report) => Status(201)(Json.toJson(InvalidDocument(id, "Invalid document")))
-				}
-			}catch{
-				case e: Exception => Status(500)(Json.toJson(UnhandledFailure(e.getMessage())))
+		try{
+			val validator = SchemaValidator(row.json)
+			val doc = Document(json)
+			validator.validate(doc) match{
+				case Right(doc) => Ok(Json.toJson(ValidDocument(row.id)))
+				case Left(report) => Status(201)(Json.toJson(InvalidDocument(row.id, "Invalid document")))
 			}
+		}catch{
+			case e: Exception => Status(500)(Json.toJson(UnhandledFailure(e.getMessage())))
 		}
 	}
 
