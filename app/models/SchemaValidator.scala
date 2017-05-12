@@ -3,7 +3,7 @@ package models
 import com.fasterxml.jackson.databind.JsonNode
 import com.github.fge.jackson.JsonLoader
 import com.github.fge.jsonschema.core.exceptions.ProcessingException
-import com.github.fge.jsonschema.core.report.ProcessingReport
+import com.github.fge.jsonschema.core.report.ListProcessingReport
 import com.github.fge.jsonschema.main.{JsonSchema, JsonSchemaFactory}
 
 import scala.util.{Either, Left, Right}
@@ -31,9 +31,9 @@ object Schema{
 }
 
 case class SchemaValidator(val schema: Schema){
-	def validate(doc: Document): Either[ProcessingReport, Document] = schema.validate(doc.node) match{
-		case report: ProcessingReport if report.isSuccess => Right(doc)
-		case report: ProcessingReport => Left(report)
+	def validate(doc: Document): Either[ListProcessingReport, Document] = schema.validate(doc.node) match{
+		case report: ListProcessingReport if report.isSuccess => Right(doc)
+		case report: ListProcessingReport => Left(report)
 	}
 }
 object SchemaValidator{

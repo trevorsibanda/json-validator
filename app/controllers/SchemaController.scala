@@ -54,7 +54,7 @@ class SchemaController @Inject()(schemaDAO: SchemaDAO)(implicit executionContext
 		val now = new java.sql.Timestamp(java.util.Calendar.getInstance().getTimeInMillis)
 		val row = SchemaRow(id, json, now)
 		val schema = Schema(row.json)
-		val invalidSchema = Status(500)(Json.toJson(InvalidSchemaUpload(id, "Schema is not a valid schema")))
+		val invalidSchema = Status(400)(Json.toJson(InvalidSchemaUpload(id, "Schema is not a valid schema")))
 		try{
 			Schema.validate(schema) match{
 				case true => {
@@ -75,7 +75,16 @@ class SchemaController @Inject()(schemaDAO: SchemaDAO)(implicit executionContext
 			val doc = Document(json)
 			validator.validate(doc) match{
 				case Right(doc) => Ok(Json.toJson(ValidDocument(row.id)))
-				case Left(report) => Status(201)(Json.toJson(InvalidDocument(row.id, "Invalid document")))
+				case Left(report) => {
+					val iter = report.iterator
+					val sb = new StringBuilder
+					def tail[T](l: List[String]): List[String] = iter.hasNext match{
+						case true => tail(l.::(iter.next.getMessage))
+						case false => l
+					}
+					val errMsg = tail(List()).mkString("", "\n","")
+					Status(400)(Json.toJson(InvalidDocument(row.id, errMsg)))
+				}
 			}
 		}catch{
 			case e: Exception => Status(500)(Json.toJson(UnhandledFailure(e.getMessage())))
